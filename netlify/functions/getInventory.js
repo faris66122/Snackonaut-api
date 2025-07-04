@@ -1,12 +1,11 @@
-// === KORRIGIERTER BACKEND-CODE MIT CORS-HEADER ===
+// === KORRIGIERTER BACKEND-CODE MIT RICHTIGEM KAPAZITÄTS-PARAMETER ===
 
 exports.handler = async function(event, context) {
     const machineId = '90553182';
     const apiToken = process.env.VENDON_API_TOKEN;
 
-    // KORREKTUR: CORS-Header, um Anfragen vom Browser zu erlauben
     const headers = {
-        'Access-Control-Allow-Origin': '*', // Erlaubt Anfragen von jeder Domain
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     };
@@ -23,15 +22,18 @@ exports.handler = async function(event, context) {
         }
 
         const data = await response.json();
+        
+        // Daten für das Frontend aufbereiten
         const products = data.result.map(p => ({
             name: p.product_name,
             amount: p.amount,
-            capacity: p.capacity 
+            // KORREKTUR: Der richtige Parameter von der Vendon API ist 'max_amount'
+            capacity: p.max_amount 
         }));
 
         return {
             statusCode: 200,
-            headers, // Wichtig: Die Header hier mitsenden
+            headers,
             body: JSON.stringify(products)
         };
     } catch (error) {
