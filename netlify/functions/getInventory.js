@@ -1,4 +1,16 @@
-// === FINALE, STABILE VERSION DES BACKEND-CODES ===
+// === FINALE, PRODUKTIONSREIFE NETLIFY FUNCTION (BASIEREND AUF DEM DEEP RESEARCH REPORT) ===
+
+// Hilfsfunktion, um API-Anfragen an Vendon zu senden
+async function vendonApiRequest(endpoint, token) {
+    const url = `https://cloud.vendon.net/rest/v1.7.0/${endpoint}`;
+    const response = await fetch(url, {
+        headers: { 'Authorization': `Token ${token}` }
+    });
+    if (!response.ok) {
+        throw new Error(`Vendon API-Fehler (${response.status}) beim Aufruf von: ${endpoint}`);
+    }
+    return response.json();
+}
 
 exports.handler = async function(event, context) {
     const machineId = '90553182';
@@ -11,30 +23,43 @@ exports.handler = async function(event, context) {
     };
 
     try {
-        const response = await fetch(`https://cloud.vendon.net/rest/v1.7.0/stats/inventoryReport?machine_id=${machineId}`, {
-            headers: { 'Authorization': apiToken }
+        // === Schritt 1: Produktstammdaten mit Kapazitäten abrufen ===
+        const productsData = await vendonApiRequest(`products?machine_id=${machineId}`, apiToken);
+        const capacityMap = new Map();
+        productsData.result.forEach(p => {
+            // Speichere die Kapazität nur, wenn sie eine gültige Zahl > 0 ist.
+            if (p.machine_defaults && typeof p.machine_defaults.amount_max === 'number' && p.machine_defaults.amount_max > 0) {
+                capacityMap.set(p.name, p.machine_defaults.amount_max);
+            }
         });
 
-        if (!response.ok) {
-            return { statusCode: response.status, headers, body: JSON.stringify({ error: 'Failed to fetch data from Vendon' }) };
-        }
+        // === Schritt 2: Aktuellen Live-Bestand abrufen ===
+        const inventoryData = await vendonApiRequest(`stats/inventoryReport?machine_id=${machineId}`, apiToken);
 
-        const data = await response.json();
-        
-        // KORREKTUR: Wir nehmen alle Produkte, die einen Namen haben, und senden nur Name und Menge.
-        const products = data.result
-            .filter(p => p.product_name)
-            .map(p => ({
-                name: p.product_name,
-                amount: p.amount
-            }));
+        // === Schritt 3: Daten zusammenführen und filtern ===
+        const finalProducts = inventoryData.result
+            .map(item => {
+                const capacity = capacityMap.get(item.product_name);
+                // Verarbeite das Produkt nur, wenn wir eine gültige Kapazität dafür gefunden haben.
+                if (capacity) {
+                    return {
+                        name: item.product_name,
+                        amount: item.amount,
+                        capacity: capacity
+                    };
+                }
+                return null; // Ansonsten wird das Produkt ignoriert.
+            })
+            .filter(p => p !== null); // Entferne alle ignorierten Produkte aus der finalen Liste.
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(products)
+            body: JSON.stringify(finalProducts)
         };
+        
     } catch (error) {
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal Server Error' }) };
+        console.error("Fehler in der Netlify Function:", error.message);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
     }
 };
