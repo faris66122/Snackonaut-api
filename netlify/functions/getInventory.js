@@ -1,6 +1,6 @@
-// === FINALE, PRODUKTIONSREIFE NETLIFY FUNCTION (MIT KORREKTEN HEADERN) ===
+// === FINALE, STABILE NETLIFY FUNCTION (ALTE, ROBUSTE SYNTAX) ===
 
-import fetch from 'node-fetch';
+const fetch = require('node-fetch'); // Zurück zur stabilen "require"-Syntax
 
 // Hilfsfunktion, um API-Anfragen an Vendon zu senden
 async function vendonApiRequest(endpoint, token) {
@@ -8,7 +8,7 @@ async function vendonApiRequest(endpoint, token) {
     const response = await fetch(url, {
         headers: { 
             'Authorization': `Token ${token}`,
-            'Accept': 'application/json' // KORREKTUR: Dieser Header ist entscheidend!
+            'Accept': 'application/json' 
         }
     });
     if (!response.ok) {
@@ -18,7 +18,8 @@ async function vendonApiRequest(endpoint, token) {
     return response.json();
 }
 
-export const handler = async function(event, context) {
+// Zurück zur stabilen "exports.handler"-Syntax
+exports.handler = async function(event, context) {
     const machineId = '90553182';
     const apiToken = process.env.VENDON_API_TOKEN;
 
