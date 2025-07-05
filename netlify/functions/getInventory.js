@@ -1,13 +1,15 @@
-// === FINALE, VEREINFACHTE NETLIFY FUNCTION (OHNE EXTERNE ABHÄNGIGKEITEN) ===
+// === FINALE, PRODUKTIONSREIFE NETLIFY FUNCTION (MIT KORREKTEN HEADERN) ===
 
-// KEIN require('node-fetch') MEHR NÖTIG!
+import fetch from 'node-fetch';
 
 // Hilfsfunktion, um API-Anfragen an Vendon zu senden
 async function vendonApiRequest(endpoint, token) {
     const url = `https://cloud.vendon.net/rest/v1.7.0/${endpoint}`;
-    // Wir verwenden jetzt die eingebaute fetch-Funktion
     const response = await fetch(url, {
-        headers: { 'Authorization': `Token ${token}` }
+        headers: { 
+            'Authorization': `Token ${token}`,
+            'Accept': 'application/json' // KORREKTUR: Dieser Header ist entscheidend!
+        }
     });
     if (!response.ok) {
         const errorBody = await response.text();
