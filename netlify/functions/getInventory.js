@@ -1,4 +1,4 @@
-// === KORRIGIERTER BACKEND-CODE MIT RICHTIGEM KAPAZITÄTS-PARAMETER ===
+// === FINALE, ROBUSTE VERSION DES BACKEND-CODES ===
 
 exports.handler = async function(event, context) {
     const machineId = '90553182';
@@ -23,13 +23,15 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
         
-        // Daten für das Frontend aufbereiten
-        const products = data.result.map(p => ({
-            name: p.product_name,
-            amount: p.amount,
-            // KORREKTUR: Der richtige Parameter von der Vendon API ist 'max_amount'
-            capacity: p.max_amount 
-        }));
+        // KORREKTUR: Filtere die Rohdaten und verarbeite nur Einträge,
+        // die eine gültige Kapazität haben (echte Produktschächte).
+        const products = data.result
+            .filter(p => typeof p.max_amount === 'number' && p.max_amount > 0)
+            .map(p => ({
+                name: p.product_name,
+                amount: p.amount,
+                capacity: p.max_amount 
+            }));
 
         return {
             statusCode: 200,
