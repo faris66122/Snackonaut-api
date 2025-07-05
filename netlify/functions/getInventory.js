@@ -1,10 +1,11 @@
-// === FINALE, KORRIGIERTE NETLIFY FUNCTION (MIT MODERNEM IMPORT) ===
+// === FINALE, VEREINFACHTE NETLIFY FUNCTION (OHNE EXTERNE ABHÄNGIGKEITEN) ===
 
-import fetch from 'node-fetch'; // KORREKTUR: Moderne Schreibweise
+// KEIN require('node-fetch') MEHR NÖTIG!
 
 // Hilfsfunktion, um API-Anfragen an Vendon zu senden
 async function vendonApiRequest(endpoint, token) {
     const url = `https://cloud.vendon.net/rest/v1.7.0/${endpoint}`;
+    // Wir verwenden jetzt die eingebaute fetch-Funktion
     const response = await fetch(url, {
         headers: { 'Authorization': `Token ${token}` }
     });
@@ -15,7 +16,6 @@ async function vendonApiRequest(endpoint, token) {
     return response.json();
 }
 
-// KORREKTUR: Moderne Schreibweise
 export const handler = async function(event, context) {
     const machineId = '90553182';
     const apiToken = process.env.VENDON_API_TOKEN;
@@ -27,7 +27,6 @@ export const handler = async function(event, context) {
     };
 
     try {
-        // === Schritt 1: Produktstammdaten mit Kapazitäten abrufen ===
         const productsData = await vendonApiRequest(`products?machine_id=${machineId}`, apiToken);
         const capacityMap = new Map();
         if (productsData.result) {
@@ -38,21 +37,15 @@ export const handler = async function(event, context) {
             });
         }
 
-        // === Schritt 2: Aktuellen Live-Bestand abrufen ===
         const inventoryData = await vendonApiRequest(`stats/inventoryReport?machine_id=${machineId}`, apiToken);
 
-        // === Schritt 3: Daten zusammenführen und filtern ===
         let finalProducts = [];
         if (inventoryData.result) {
             finalProducts = inventoryData.result
                 .map(item => {
                     const capacity = capacityMap.get(item.product_name);
                     if (capacity) {
-                        return {
-                            name: item.product_name,
-                            amount: item.amount,
-                            capacity: capacity
-                        };
+                        return { name: item.product_name, amount: item.amount, capacity: capacity };
                     }
                     return null;
                 })
