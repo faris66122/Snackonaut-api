@@ -14,7 +14,7 @@ exports.handler = async function (event, context) {
   }
 
   try {
-    // 1) Produkt-Metadaten + capacity
+    // 1) Produkt-Metadaten inkl. capacity
     const stockRes = await fetch(
       `https://cloud.vendon.net/rest/v1.7.0/stock?machine_id=${machineId}`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -30,13 +30,13 @@ exports.handler = async function (event, context) {
     if (!invRes.ok) throw new Error(`Inventory API ${invRes.status}`);
     const { result: inv } = await invRes.json();
 
-    // 3) Schneller Lookup: product_id → amount
+    // 3) Map product_id → amount
     const invMap = Object.fromEntries(inv.map(x => [ x.product_id, x.amount ]));
 
-    // 4) Finales Output-Array
+    // 4) Finales Ausgabe-Array
     const output = meta.map(p => ({
       name:     p.name,
-      amount:   invMap[p.id] ?? 0,
+      amount:   invMap[p.id]    ?? 0,
       capacity: p.machine_defaults?.amount_max ?? 0
     }));
 
