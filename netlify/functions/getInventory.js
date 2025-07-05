@@ -1,4 +1,6 @@
-// === FINALE, PRODUKTIONSREIFE NETLIFY FUNCTION (BASIEREND AUF DEM DEEP RESEARCH REPORT) ===
+// === FINALE, PRODUKTIONSREIFE NETLIFY FUNCTION (BASIEREND AUF POSTMAN-BEWEIS) ===
+
+const fetch = require('node-fetch');
 
 // Hilfsfunktion, um API-Anfragen an Vendon zu senden
 async function vendonApiRequest(endpoint, token) {
@@ -7,7 +9,8 @@ async function vendonApiRequest(endpoint, token) {
         headers: { 'Authorization': `Token ${token}` }
     });
     if (!response.ok) {
-        throw new Error(`Vendon API-Fehler (${response.status}) beim Aufruf von: ${endpoint}`);
+        const errorBody = await response.text();
+        throw new Error(`Vendon API-Fehler (${response.status}) bei ${endpoint}: ${errorBody}`);
     }
     return response.json();
 }
@@ -26,31 +29,35 @@ exports.handler = async function(event, context) {
         // === Schritt 1: Produktstammdaten mit Kapazitäten abrufen ===
         const productsData = await vendonApiRequest(`products?machine_id=${machineId}`, apiToken);
         const capacityMap = new Map();
-        productsData.result.forEach(p => {
-            // Speichere die Kapazität nur, wenn sie eine gültige Zahl > 0 ist.
-            if (p.machine_defaults && typeof p.machine_defaults.amount_max === 'number' && p.machine_defaults.amount_max > 0) {
-                capacityMap.set(p.name, p.machine_defaults.amount_max);
-            }
-        });
+        if (productsData.result) {
+            productsData.result.forEach(p => {
+                if (p.name && p.machine_defaults && typeof p.machine_defaults.amount_max === 'number' && p.machine_defaults.amount_max > 0) {
+                    capacityMap.set(p.name, p.machine_defaults.amount_max);
+                }
+            });
+        }
 
         // === Schritt 2: Aktuellen Live-Bestand abrufen ===
         const inventoryData = await vendonApiRequest(`stats/inventoryReport?machine_id=${machineId}`, apiToken);
 
         // === Schritt 3: Daten zusammenführen und filtern ===
-        const finalProducts = inventoryData.result
-            .map(item => {
-                const capacity = capacityMap.get(item.product_name);
-                // Verarbeite das Produkt nur, wenn wir eine gültige Kapazität dafür gefunden haben.
-                if (capacity) {
-                    return {
-                        name: item.product_name,
-                        amount: item.amount,
-                        capacity: capacity
-                    };
-                }
-                return null; // Ansonsten wird das Produkt ignoriert.
-            })
-            .filter(p => p !== null); // Entferne alle ignorierten Produkte aus der finalen Liste.
+        let finalProducts = [];
+        if (inventoryData.result) {
+            finalProducts = inventoryData.result
+                .map(item => {
+                    const capacity = capacityMap.get(item.product_name);
+                    // Verarbeite das Produkt nur, wenn wir eine gültige Kapazität dafür gefunden haben.
+                    if (capacity) {
+                        return {
+                            name: item.product_name,
+                            amount: item.amount,
+                            capacity: capacity
+                        };
+                    }
+                    return null;
+                })
+                .filter(p => p !== null); // Entferne alle ignorierten Produkte.
+        }
 
         return {
             statusCode: 200,
