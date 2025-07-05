@@ -1,4 +1,4 @@
-// === DETEKTIV-CODE: Sendet die ungefilterten Rohdaten an das Frontend ===
+// === FINALE, STABILE VERSION DES BACKEND-CODES ===
 
 exports.handler = async function(event, context) {
     const machineId = '90553182';
@@ -21,11 +21,18 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
         
-        // WICHTIG: Wir senden jetzt die kompletten, rohen "result"-Daten zurück, ohne Filterung.
+        // KORREKTUR: Wir nehmen alle Produkte, die einen Namen haben, und senden nur Name und Menge.
+        const products = data.result
+            .filter(p => p.product_name)
+            .map(p => ({
+                name: p.product_name,
+                amount: p.amount
+            }));
+
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(data.result) // Sende das rohe Ergebnis
+            body: JSON.stringify(products)
         };
     } catch (error) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal Server Error' }) };
