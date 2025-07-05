@@ -1,6 +1,6 @@
-// === FINALE, PRODUKTIONSREIFE NETLIFY FUNCTION (BASIEREND AUF POSTMAN-BEWEIS) ===
+// === FINALE, KORRIGIERTE NETLIFY FUNCTION (MIT MODERNEM IMPORT) ===
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch'; // KORREKTUR: Moderne Schreibweise
 
 // Hilfsfunktion, um API-Anfragen an Vendon zu senden
 async function vendonApiRequest(endpoint, token) {
@@ -15,7 +15,8 @@ async function vendonApiRequest(endpoint, token) {
     return response.json();
 }
 
-exports.handler = async function(event, context) {
+// KORREKTUR: Moderne Schreibweise
+export const handler = async function(event, context) {
     const machineId = '90553182';
     const apiToken = process.env.VENDON_API_TOKEN;
 
@@ -46,7 +47,6 @@ exports.handler = async function(event, context) {
             finalProducts = inventoryData.result
                 .map(item => {
                     const capacity = capacityMap.get(item.product_name);
-                    // Verarbeite das Produkt nur, wenn wir eine gültige Kapazität dafür gefunden haben.
                     if (capacity) {
                         return {
                             name: item.product_name,
@@ -56,7 +56,7 @@ exports.handler = async function(event, context) {
                     }
                     return null;
                 })
-                .filter(p => p !== null); // Entferne alle ignorierten Produkte.
+                .filter(p => p !== null);
         }
 
         return {
