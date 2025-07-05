@@ -1,4 +1,4 @@
-// === FINALE, ROBUSTE VERSION DES BACKEND-CODES ===
+// === DETEKTIV-CODE: Sendet die ungefilterten Rohdaten an das Frontend ===
 
 exports.handler = async function(event, context) {
     const machineId = '90553182';
@@ -12,9 +12,7 @@ exports.handler = async function(event, context) {
 
     try {
         const response = await fetch(`https://cloud.vendon.net/rest/v1.7.0/stats/inventoryReport?machine_id=${machineId}`, {
-            headers: {
-                'Authorization': apiToken
-            }
+            headers: { 'Authorization': apiToken }
         });
 
         if (!response.ok) {
@@ -23,20 +21,11 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
         
-        // KORREKTUR: Filtere die Rohdaten und verarbeite nur Einträge,
-        // die eine gültige Kapazität haben (echte Produktschächte).
-        const products = data.result
-            .filter(p => typeof p.max_amount === 'number' && p.max_amount > 0)
-            .map(p => ({
-                name: p.product_name,
-                amount: p.amount,
-                capacity: p.max_amount 
-            }));
-
+        // WICHTIG: Wir senden jetzt die kompletten, rohen "result"-Daten zurück, ohne Filterung.
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(products)
+            body: JSON.stringify(data.result) // Sende das rohe Ergebnis
         };
     } catch (error) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal Server Error' }) };
